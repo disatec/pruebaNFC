@@ -324,6 +324,8 @@ public class MainActivity extends Activity {
 
         protected String processText(byte[] text)
         {
+
+
             String resultText = "<html style=' font-family: \"Courier\"; font-size: 14px'><body style='margin:2px;'>";
             boolean bold = false;
             boolean doublestrike = false;
@@ -508,7 +510,10 @@ public class MainActivity extends Activity {
 
                 TextView mText = (TextView) findViewById(R.id.mTextView);
 
-                String resultText = processText(message);
+                VirtualPrinter vp = new VirtualPrinter();
+                vp.Initialize();
+                String resultText = vp.processText(message);
+                //String resultText = processText(message);
                 WebView webview = (WebView) findViewById(R.id.webview);
                 webview.getSettings().setJavaScriptEnabled(true);
                 webview.loadDataWithBaseURL("", resultText, "text/html", "UTF-8", "");
