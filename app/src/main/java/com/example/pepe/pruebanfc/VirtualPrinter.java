@@ -1,9 +1,16 @@
 package com.example.pepe.pruebanfc;
 
+import java.util.Arrays;
+import java.util.StringTokenizer;
+import java.util.Vector;
+
 /**
  * Created by Pepe on 10/06/2016.
  */
 public class VirtualPrinter {
+    int [] cadenasDeControl = {10,27,28,29};
+
+
     int [] frmSinFormato = {27,33,0};
     int [] frmNegrita = {27,33,8};
     int [] frmSubrallado = {27,33,128};
@@ -29,13 +36,40 @@ public class VirtualPrinter {
     int [] frmSeparacionEntreLineasDefecto = {27,50};
     int [] frmTamanoFuenteNumeroServicio = {27,97,49,29,33,67};
 
-    int [][] tiposPosibles;
+    // Configuración con parametros configurables -1 'configurable' ,  -2 , 'indica los siguientes n bytes a leer'
+    int [] frmAnchoCodigoBarras = {29, 'w', -1};  // Set barcode width
+    /* The module width is as follows:
+                        n	Module width for multilevel barcode	Binary level barcode
+                        Thin element width	Thick element width
+                        2	0.282 mm {0.011 inch}	0.282 mm {0.011 inch}	0.706 mm {0.028 inch}
+                        3	0.423 mm {0.017 inch}	0.423 mm {0.017 inch}	1.129 mm {0.044 inch}
+                        4	0.564 mm {0.022 inch}	0.564 mm {0.022 inch}	1.411 mm {0.056 inch}
+                        5	0.706 mm {0.028 inch}	0.706 mm {0.028 inch}	1.834 mm {0.072 inch}
+                        6	0.847 mm {0.033 inch}	0.847 mm {0.033 inch}	2.258 mm {0.089 inch}
+                        */
+    int [] frmAlturaCodigoBarras = {29, 'h', -1}; // Set barcode height,  A set unit is one dot. One dot corresponds to 0.141 mm {1/180 inch}.
+    int [] frmSelectPrintPositionCode = {29, 'H', -1};
+        /* Selects the print position of Human Readable Interpretation (HRI) characters when printing a barcode, using n as follows:
+                                n	Print position
+                                0, 48	Not printed
+                                1, 49	Above the barcode
+                                2, 50	Below the barcode
+                                3, 51	Both above and below the barcode
+                                */
 
+    int [] frmPrintBarCode = {29, 'k', 69, -2}; // prints bar code, nos dice la cantidad de caracteres que están dentro del barcode,
+
+    int [][] tiposPosibles;
     boolean bold = false;
     boolean doublestrike = false;
     boolean doublewidth = false;
     boolean underlined = false;
     int extraline = 0;
+
+    int anchuraCodigoBarras = 2;
+    int alturaCodigoBarras = 2;
+    int positionCode = 0;
+
 
 
     public void Initialize()
@@ -43,15 +77,65 @@ public class VirtualPrinter {
         tiposPosibles = new int[][] {frmSinFormato, frmNegrita, frmSubrallado, frmSubralladoNegrita, frmAlta,
             frmAltaNegrita,frmAltaSubrallado, frmAltaNegritaSubrallado, frmAncho, frmAnchoNegrita,  frmAnchoSubrallado, frmAnchoNegritaSubrallado,
             frmAnchoAlta,frmAnchoNegritaAlta, frmAnchoAltaSubrallado, frmAnchoAltaSubralladoNegrita, frmSecuenciaCambioPagina, frmSecuenciaInicial, frmSecuenciaFinal,
-        frmSimboloEuro, frmComprimida,frmSeparacionEntreLineas, frmSeparacionEntreLineasDefecto, frmTamanoFuenteNumeroServicio };
+        frmSimboloEuro, frmComprimida,frmSeparacionEntreLineas, frmSeparacionEntreLineasDefecto, frmTamanoFuenteNumeroServicio,
+        frmAnchoCodigoBarras, frmAlturaCodigoBarras, frmPrintBarCode, frmSelectPrintPositionCode};
     }
 
 
-    public String EvaluarSecuencia (int[] tipoEvaluar) {
+    public String printCodigoBarras(int anchura, int altura, String codigoBarras)
+    {
+        String strResult = "</div><div>";
+        strResult += "<svg id=\"barcode\"></svg>";
+        strResult += "<script src=\"JsBarcode.code39.min.js\"></script>";
+        String strNoDisplayText = "";
+        if (positionCode == 0)
+            strNoDisplayText = ",displayValue: false";
+
+        String strDisplayTop = "";
+        if (positionCode == 1)
+            strDisplayTop = ", textPosition: \"top\"";
+
+        strResult += "<script>JsBarcode(\"#barcode\", \""+codigoBarras+"\", {width: "+anchura/1.5+", height:"+altura/1.5+ strNoDisplayText + strDisplayTop +"});</script>";
+        strResult += "</div>";
+        return strResult;
+    }
+
+    public String EvaluarSecuencia (int[] tipoEvaluar, Vector<Integer> parameters) {
         String resultText = "";
         if (tipoEvaluar == frmSimboloEuro) {
                 return "&euro;";
-        } else if (tipoEvaluar == frmSinFormato) {
+        }
+        else if (tipoEvaluar == frmPrintBarCode) {
+            String strBarCode = "";
+            for (int i=1;i<parameters.size();i++)
+            {
+                strBarCode += (char)parameters.elementAt(i).intValue();
+            }
+
+            return printCodigoBarras(anchuraCodigoBarras, alturaCodigoBarras, strBarCode);
+
+
+        }
+
+        else if (tipoEvaluar == frmAlturaCodigoBarras)
+        {
+            alturaCodigoBarras = parameters.elementAt(0).intValue();
+            return "";
+        }
+        else if (tipoEvaluar == frmAnchoCodigoBarras)
+        {
+            anchuraCodigoBarras = parameters.elementAt(0).intValue();
+            return "";
+        }
+
+        else if (tipoEvaluar == frmSelectPrintPositionCode)
+        {
+            positionCode = parameters.elementAt(0).intValue();
+            return "";
+        }
+
+
+        else if (tipoEvaluar == frmSinFormato) {
             if (underlined) {
                 resultText += "</u>";
                 underlined = false;
@@ -166,23 +250,48 @@ public class VirtualPrinter {
         resultText += "<div style='min-height:17px;'><div style='float:left'>";
         for (int i=0; i<text.length; i++) {
             boolean bMismatch = false;
-            for (int iType=0; iType < tiposPosibles.length && !bMismatch; iType++)
-            {
-                int[] tipoEvaluar = tiposPosibles[iType];
-                bMismatch = true;
-                for (int iChar = 0; iChar < tipoEvaluar.length && bMismatch; iChar++)
-                {
-                    if (i+iChar>=text.length || (text[i+iChar] & 0xff) != tipoEvaluar[iChar])
-                    {
-                        bMismatch = false;
+
+            int idx = Arrays.binarySearch(cadenasDeControl, text[i] & 0xff);
+            // Si es una cadena de control, busco si hay más coincidencias
+            if (idx >= 0) {
+
+                Vector<Integer> parameters = new Vector<Integer>();
+                for (int iType = 0; iType < tiposPosibles.length && !bMismatch; iType++) {
+                    int[] tipoEvaluar = tiposPosibles[iType];
+                    int extraChars = 0;
+                    bMismatch = true;
+                    for (int iChar = 0; iChar < tipoEvaluar.length && bMismatch; iChar++) {
+                        // Si coincidide o es un parametro, sigue coincidiendo
+                        if (tipoEvaluar[iChar] == -1)  // parámetro fijo
+                        {
+                            parameters.add((int)(text[i+iChar] & 0xff));
+                        }
+                        else if (tipoEvaluar[iChar] == -2) // parametro que indica que hay que leer los siguientes 'n' caracteres
+                        {
+                            int nroCharsToRead = (int)(text[i+iChar] & 0xff);
+                            //parameters.add(nroCharsToRead);
+                            for (int j=0; j< nroCharsToRead;j++)
+                            {
+                                parameters.add((int)(text[i+iChar+j] & 0xff));
+                            }
+
+                            extraChars += nroCharsToRead;
+
+
+
+                        }
+                        else if (i + iChar >= text.length || (text[i + iChar] & 0xff) != tipoEvaluar[iChar] ) {
+                            bMismatch = false;
+                        }
+                    }
+
+                    if (bMismatch) {
+                        resultText += EvaluarSecuencia(tipoEvaluar, parameters);
+                        i += tipoEvaluar.length + extraChars - 1;
                     }
                 }
-
-                if (bMismatch) {
-                    resultText += EvaluarSecuencia(tipoEvaluar);
-                    i+= tipoEvaluar.length -1;
-                }
             }
+
 
             if (!bMismatch) {
                 byte ch = text[i];
@@ -204,6 +313,12 @@ public class VirtualPrinter {
                     default:
                         resultText+=(char)ch;
                 }
+
+
+
+
+
+
             }
 
         }

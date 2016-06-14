@@ -516,7 +516,7 @@ public class MainActivity extends Activity {
                 //String resultText = processText(message);
                 WebView webview = (WebView) findViewById(R.id.webview);
                 webview.getSettings().setJavaScriptEnabled(true);
-                webview.loadDataWithBaseURL("", resultText, "text/html", "UTF-8", "");
+                webview.loadDataWithBaseURL("file:///android_asset/", resultText, "text/html", "UTF-8", "");
                 //mText.setText(Html.fromHtml(resultText));
             }
             else {
